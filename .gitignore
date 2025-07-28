@@ -1,0 +1,7 @@
+# Python 仮想環境
+.venv/
+
+# キャッシュやログ
+__pycache__/
+*.py[cod]
+*.log
