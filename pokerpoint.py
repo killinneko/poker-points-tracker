@@ -59,11 +59,10 @@ def update_points(user_id: str, delta: int) -> None:
         save_data(data)
 
 # ===== パスワード管理 =====
-# 管理者パスワードのハッシュ値を secrets.toml に設定してください
+# 管理者パスワードの SHA-256 ハッシュ値を secrets.toml に設定してください
 # [secrets]
 # admin_password_hash = "<SHA256ハッシュ>"
 ADMIN_PASSWORD_HASH = st.secrets.get("admin_password_hash", "2cef86d059837fc3e32df7a286bfc692012e50e0c1547968b569cc26df47af04")
-
 
 def verify_password(input_pwd: str) -> bool:
     """
@@ -101,12 +100,39 @@ if mode == "一般ユーザ":
         table = [{"ユーザID": uid, "ポイント": pts} for uid, pts in data.items()]
         st.table(table)
 
+    # JSON データのダウンロード
+    json_str = json.dumps(data, ensure_ascii=False, indent=2)
+    st.download_button(
+        label="🔽 データをダウンロード",
+        data=json_str,
+        file_name=DATA_FILE,
+        mime="application/json"
+    )
+
 elif mode == "特権ユーザ":
     st.header("🔐 特権ユーザモード")
     pwd = st.text_input("管理者パスワード", type="password")
     if pwd:
         if verify_password(pwd):
             st.success("認証に成功しました！")
+            # JSON データのアップロード
+            uploaded_file = st.file_uploader(
+                "📂 データをアップロード",
+                type=["json"],
+                help="poker_points.json を選択してください"
+            )
+            if uploaded_file:
+                try:
+                    new_data = json.load(uploaded_file)
+                    if isinstance(new_data, dict):
+                        save_data(new_data)
+                        data = new_data
+                        st.success("データを正常にアップロードしました。")
+                    else:
+                        st.error("アップロードされたファイルの形式が正しくありません。JSON オブジェクトを期待しています。")
+                except Exception as e:
+                    st.error(f"アップロード中にエラーが発生しました: {e}")
+
             # 全ユーザとポイント一覧を表示
             if data:
                 st.subheader("📋 登録ユーザ一覧とポイント")
