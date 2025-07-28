@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import hashlib
 
 # ===== ファイル設定 =====
 DATA_FILE = 'poker_points.json'
@@ -57,19 +58,28 @@ def update_points(user_id: str, delta: int) -> None:
         data[user_id] += delta
         save_data(data)
 
-# ===== 管理者パスワード設定 =====
-# .streamlit/secrets.toml に以下を追加してお使いください：
+# ===== パスワード管理 =====
+# 管理者パスワードのハッシュ値を secrets.toml に設定してください
 # [secrets]
-# admin_password = "your_admin_password"
-try:
-    ADMIN_PASSWORD = st.secrets["admin_password"]
-except Exception:
-    ADMIN_PASSWORD = "superstarspectacle"
+# admin_password_hash = "<SHA256ハッシュ>"
+ADMIN_PASSWORD_HASH = st.secrets.get("admin_password_hash", "2cef86d059837fc3e32df7a286bfc692012e50e0c1547968b569cc26df47af04")
+
+
+def verify_password(input_pwd: str) -> bool:
+    """
+    入力パスワードを SHA-256 ハッシュ化して照合します。
+    """
+    if not ADMIN_PASSWORD_HASH:
+        return False
+    hashed = hashlib.sha256(input_pwd.encode('utf-8')).hexdigest()
+    return hashed == ADMIN_PASSWORD_HASH
 
 # ===== Streamlit アプリ =====
 st.title("Poker Points Tracker (JSON版)")
 menu = ["一般ユーザ", "特権ユーザ"]
 mode = st.sidebar.selectbox("モードを選択", menu)
+
+data = load_data()
 
 if mode == "一般ユーザ":
     st.header("💡 一般ユーザモード")
@@ -84,8 +94,8 @@ if mode == "一般ユーザ":
         pts = get_points(user_id)
         if pts is not None:
             st.info(f"{user_id} さんの現在のポイント: {pts}")
+
     # 全ユーザとポイント一覧を表示
-    data = load_data()
     if data:
         st.subheader("📋 登録ユーザ一覧とポイント")
         table = [{"ユーザID": uid, "ポイント": pts} for uid, pts in data.items()]
@@ -95,9 +105,8 @@ elif mode == "特権ユーザ":
     st.header("🔐 特権ユーザモード")
     pwd = st.text_input("管理者パスワード", type="password")
     if pwd:
-        if pwd == ADMIN_PASSWORD:
+        if verify_password(pwd):
             st.success("認証に成功しました！")
-            data = load_data()
             # 全ユーザとポイント一覧を表示
             if data:
                 st.subheader("📋 登録ユーザ一覧とポイント")
