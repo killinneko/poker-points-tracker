@@ -4,6 +4,7 @@ import os
 import hashlib
 import math
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 # ===== ファイル設定 =====
 DATA_FILE = 'poker_points.json'
@@ -22,12 +23,14 @@ def load_data() -> dict:
 
 def get_last_updated() -> str:
     """
-    JSON ファイルの最終更新日時を返します。
+    JSON ファイルの最終更新日時を日本標準時（Asia/Tokyo）で返します。
     ファイルがなければ '-' を返します。
     """
     if os.path.exists(DATA_FILE):
         mtime = os.path.getmtime(DATA_FILE)
-        return datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+        # 日本標準時タイムゾーンで変換
+        dt = datetime.fromtimestamp(mtime, tz=ZoneInfo("Asia/Tokyo"))
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
     return '-'
 
 def save_data(data: dict) -> None:
